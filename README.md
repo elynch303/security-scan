@@ -19,7 +19,7 @@ An [Omarchy](https://omarchy.com) bar-widget plugin that shows a live security b
 | Scanner | What it checks | How to install |
 |---|---|---|
 | **AUR-Malware** | Atomic Arch IOC scan — pacman/AUR packages, npm/bun caches, eBPF rootkit artifacts, hidden processes | Clone [AUR-Malware](https://github.com/Atomic-Arch/AUR-Malware) to `/local/applications/AUR-Malware/` |
-| **[bumblebee](https://github.com/anchore/bumblebee)** | Endpoint package inventory across npm, pypi, go, rubygems, homebrew, etc. | `go install github.com/anchore/bumblebee@latest` |
+| **[bumblebee](https://github.com/perplexityai/bumblebee)** | Endpoint package inventory across npm, pypi, go, rubygems, homebrew, etc. | `GOBIN=$HOME/.local/bin go install github.com/perplexityai/bumblebee@latest` |
 | **bun-check** | Per-project dev-env one-shot scan (opens a terminal picker) | Bundled — run `install.sh` after adding the plugin |
 
 The bun-check one-shot script (`qs-bun-check-oneshot.sh`) is included in this repo. After `omarchy plugin add`, run the optional install step:

@@ -119,7 +119,7 @@ BarWidget {
 
   FileView {
     id: bbProbe
-    path: home + "/go/bin/bumblebee"
+    path: home + "/.local/bin/bumblebee"
     onLoaded:     root.bbInstalled = true
     onLoadFailed: root.bbInstalled = false
   }
@@ -262,12 +262,15 @@ BarWidget {
 
   function installBB() {
     root.bbOpBusy = true; root.bbOpMsg = "Installing via go…"; root.bbOpError = false
-    bbInstallProc.command = ["/usr/bin/mise", "exec", "--", "go", "install", "github.com/anchore/bumblebee@latest"]
+    bbInstallProc.command = [
+      "/usr/bin/mise", "exec", "--", "sh", "-c",
+      "GOBIN=$HOME/.local/bin go install github.com/perplexityai/bumblebee@latest"
+    ]
     bbInstallProc.running = false; bbInstallProc.running = true
   }
   function uninstallBB() {
     root.bbOpBusy = true; root.bbOpMsg = ""; root.bbOpError = false
-    bbUninstallProc.command = ["bash", "-c", "rm -f \"$HOME/go/bin/bumblebee\""]
+    bbUninstallProc.command = ["bash", "-c", "rm -f \"$HOME/.local/bin/bumblebee\""]
     bbUninstallProc.running = false; bbUninstallProc.running = true
   }
 
