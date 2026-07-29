@@ -128,7 +128,7 @@ BarWidget {
   // ── bumblebee install detection (needs login shell for ~/go/bin in PATH) ─
   Process {
     id: bbProbe
-    command: ["bash", "-lc", "command -v bumblebee >/dev/null 2>&1 && echo yes || echo no"]
+    command: ["bash", "-lc", "export PATH=\"$HOME/.local/share/mise/shims:$HOME/go/bin:/usr/local/go/bin:$PATH\"; command -v bumblebee >/dev/null 2>&1 && echo yes || echo no"]
     stdout: SplitParser {
       onRead: function(data) { root.bbInstalled = data.trim() === "yes" }
     }
@@ -214,7 +214,7 @@ BarWidget {
     onExited: function(code) {
       root.bbOpBusy  = false
       root.bbOpError = (code !== 0)
-      root.bbOpMsg   = code === 0 ? "Installed — run a scan to verify" : "Install failed (go must be in PATH)"
+      root.bbOpMsg   = code === 0 ? "Installed — run a scan to verify" : "Install failed — is go installed? (mise, pacman -S go)"
       bbProbe.running = false
       bbProbe.running = true
     }
@@ -267,14 +267,17 @@ BarWidget {
 
   function installBB() {
     root.bbOpBusy = true; root.bbOpMsg = "Installing via go…"; root.bbOpError = false
-    bbInstallProc.command = ["bash", "-lc", "go install github.com/anchore/bumblebee@latest"]
+    bbInstallProc.command = [
+      "bash", "-lc",
+      "export PATH=\"$HOME/.local/share/mise/shims:$HOME/go/bin:/usr/local/go/bin:$PATH\"; go install github.com/anchore/bumblebee@latest"
+    ]
     bbInstallProc.running = false; bbInstallProc.running = true
   }
   function uninstallBB() {
     root.bbOpBusy = true; root.bbOpMsg = ""; root.bbOpError = false
     bbUninstallProc.command = [
       "bash", "-lc",
-      "bb=$(command -v bumblebee 2>/dev/null); [ -n \"$bb\" ] && rm -f \"$bb\" || exit 1"
+      "export PATH=\"$HOME/.local/share/mise/shims:$HOME/go/bin:/usr/local/go/bin:$PATH\"; bb=$(command -v bumblebee 2>/dev/null); [ -n \"$bb\" ] && rm -f \"$bb\" || exit 1"
     ]
     bbUninstallProc.running = false; bbUninstallProc.running = true
   }

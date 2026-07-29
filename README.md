@@ -2,8 +2,9 @@
 
 An [Omarchy](https://omarchy.com) bar-widget plugin that shows a live security badge in your bar. Runs system-wide scans on a 6-hour timer and lets you trigger manual re-scans or per-project one-shot scans from a click-through popup.
 
-![Security Scan and Fan Monitor widgets in the bar](preview.png)
-*(Shield icon, second from right)*
+![Security scan popup showing AUR-MALWARE and BUMBLEBEE results](preview.png)
+
+![Scanner setup panel with install, uninstall, and toggle controls](settings-preview.png)
 
 ## Features
 
