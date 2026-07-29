@@ -42,8 +42,8 @@ BarWidget {
   property bool bunInstalled: false
 
   // ── effective availability for the main view ────────────────────────────
-  readonly property bool aurAvailable:    aur.available === true && aurUserEnabled
-  readonly property bool bbAvailable:     bb.available  === true && bbUserEnabled
+  readonly property bool aurAvailable: aurInstalled && aurUserEnabled
+  readonly property bool bbAvailable:  bbInstalled  && bbUserEnabled
   readonly property bool bunCheckEnabled: bunInstalled && bunUserEnabled
   readonly property bool anyScanner:      aurAvailable || bbAvailable
 
@@ -280,11 +280,12 @@ BarWidget {
   }
 
   function installBun() {
-    root.bunOpBusy = true; root.bunOpMsg = ""; root.bunOpError = false
+    root.bunOpBusy = true; root.bunOpMsg = "Downloading…"; root.bunOpError = false
     bunInstallProc.command = [
       "bash", "-c",
-      "mkdir -p \"$(dirname \"$1\")\" && cp \"$0\" \"$1\" && chmod +x \"$1\"",
-      root.bunSrc, root.bunDst
+      "mkdir -p \"$(dirname \"$1\")\" && curl -fsSL \"$0\" -o \"$1\" && chmod +x \"$1\"",
+      "https://raw.githubusercontent.com/elynch303/security-scan/main/qs-bun-check-oneshot.sh",
+      root.bunDst
     ]
     bunInstallProc.running = false; bunInstallProc.running = true
   }
