@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "id": "local.security-scan",
+  "id": "io.github.elynch303.security-scan",
   "name": "Security Scan",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "elynch303",
-  "description": "AUR-malware and bumblebee package security scan badge, installable on any Omarchy bar",
+  "description": "Security badge for Omarchy bars. Runs AUR-Malware and bumblebee system scans on a 6-hour timer; each scanner is optional and only shown when installed. Click for live results and per-project one-shot scans.",
   "kinds": ["bar-widget"],
   "entryPoints": { "barWidget": "SecurityWidget.qml" }
 }
