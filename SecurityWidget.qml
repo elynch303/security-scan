@@ -264,7 +264,7 @@ BarWidget {
     root.bbOpBusy = true; root.bbOpMsg = "Installing via go…"; root.bbOpError = false
     bbInstallProc.command = [
       "/usr/bin/mise", "exec", "--", "sh", "-c",
-      "GOBIN=$HOME/.local/bin go install github.com/perplexityai/bumblebee@latest"
+      "GOBIN=$HOME/.local/bin go install github.com/perplexityai/bumblebee/cmd/bumblebee@latest"
     ]
     bbInstallProc.running = false; bbInstallProc.running = true
   }
