@@ -15,7 +15,7 @@ import qs.Ui
 //               — preferences persisted to ~/.config/qs-security/settings.json
 //
 // Scanners:
-//   AUR-Malware  git clone to /local/applications/AUR-Malware (or QS_SEC_AUR_MALWARE)
+//   AUR-Malware  git clone to ~/.local/share/AUR-Malware (or QS_SEC_AUR_MALWARE)
 //   bumblebee    go install github.com/anchore/bumblebee@latest
 //   bun-check    bundled script → ~/.local/bin/qs-bun-check-oneshot.sh
 BarWidget {
@@ -49,6 +49,32 @@ BarWidget {
 
   // ── settings panel UI state ─────────────────────────────────────────────
   property bool showSettings: false
+  property bool showAurDetail: false
+
+  readonly property var aurIssues: aur.issues || []
+  // Grouped by source (package/reason identified by qs-security-scan.sh,
+  // e.g. a comment in /etc/hosts or the package that owns a file) -- without
+  // this, every finding was a loose block of text with no indication of
+  // WHAT it belongs to.
+  readonly property var aurGroups: {
+    var map = {}, order = []
+    for (var i = 0; i < aurIssues.length; i++) {
+      var it = aurIssues[i]
+      var key = (it.source && it.source !== "") ? it.source : "OTHER"
+      if (!map[key]) { map[key] = []; order.push(key) }
+      map[key].push(it)
+    }
+    // "OTHER" (no identified source) always last -- specific things (a
+    // named package/app) first, generic afterward.
+    order.sort(function(a, b) {
+      if (a === "OTHER") return 1
+      if (b === "OTHER") return -1
+      return 0
+    })
+    var out = []
+    for (var j = 0; j < order.length; j++) out.push({ source: order[j], issues: map[order[j]] })
+    return out
+  }
 
   property bool   aurOpBusy: false
   property string aurOpMsg:  ""
@@ -67,12 +93,12 @@ BarWidget {
 
   readonly property string aurEffectivePath: {
     var ov = Quickshell.env("QS_SEC_AUR_MALWARE")
-    return ov ? ov : "/local/applications/AUR-Malware/check-atomic-arch_new.sh"
+    return ov ? ov : root.home + "/.local/share/AUR-Malware/check-atomic-arch_new.sh"
   }
   readonly property string aurMalwareDir: {
     var p = root.aurEffectivePath
     var i = p.lastIndexOf("/")
-    return i > 0 ? p.substring(0, i) : "/local/applications/AUR-Malware"
+    return i > 0 ? p.substring(0, i) : root.home + "/.local/share/AUR-Malware"
   }
 
   readonly property string bunDst: home + "/.local/bin/qs-bun-check-oneshot.sh"
@@ -186,6 +212,25 @@ BarWidget {
     onTriggered: { root.securityScanning = false; rescanProc.running = false }
   }
 
+  // ── dismiss / reactivate a heuristic finding ────────────────────────────
+  // Only for issue.dismissible === true -- qs-security-scan.sh never marks
+  // as dismissible the checks that are direct evidence of a compromise
+  // (known-infected package, etc.), so this doesn't need checking here too:
+  // the row's button doesn't even exist for those.
+  Process {
+    id: aurDismissProc
+    // qs-security-dismiss.sh recomputes the status file directly (no
+    // rescan, ~13s), so a reload is all that's needed -- no root.rescan(),
+    // which would relaunch the full scan.
+    onExited: statusFile.reload()
+  }
+  function setAurDismissed(name, detailText, dismissed) {
+    aurDismissProc.command = [home + "/.local/bin/qs-security-dismiss.sh",
+                               dismissed ? "dismiss" : "reactivate", name, detailText]
+    aurDismissProc.running = false
+    aurDismissProc.running = true
+  }
+
   // ── install / uninstall processes ───────────────────────────────────────
   Process {
     id: aurInstallProc
@@ -249,7 +294,7 @@ BarWidget {
     root.aurOpBusy = true; root.aurOpMsg = ""; root.aurOpError = false
     aurInstallProc.command = [
       "bash", "-c",
-      "mkdir -p \"$(dirname \"$0\")\" && git clone https://github.com/Atomic-Arch/AUR-Malware.git \"$0\"",
+      "mkdir -p \"$(dirname \"$0\")\" && git clone https://github.com/nightdevil00/AUR-Malware.git \"$0\"",
       root.aurMalwareDir
     ]
     aurInstallProc.running = false; aurInstallProc.running = true
@@ -264,7 +309,7 @@ BarWidget {
     root.bbOpBusy = true; root.bbOpMsg = "Installing via go…"; root.bbOpError = false
     bbInstallProc.command = [
       "/usr/bin/mise", "exec", "--", "sh", "-c",
-      "GOBIN=$HOME/.local/bin go install github.com/perplexityai/bumblebee@latest"
+      "GOBIN=$HOME/.local/bin go install github.com/perplexityai/bumblebee/cmd/bumblebee@latest"
     ]
     bbInstallProc.running = false; bbInstallProc.running = true
   }
@@ -359,7 +404,7 @@ BarWidget {
     active: root.aurInstalled || root.bbInstalled || root.bunInstalled
     onPressed: {
       detail.open = !detail.open
-      if (!detail.open) root.showSettings = false
+      if (!detail.open) { root.showSettings = false; root.showAurDetail = false }
     }
   }
 
@@ -380,9 +425,11 @@ BarWidget {
     bar: root.bar
     owner: root
     contentWidth: Style.space(300)
-    contentHeight: (root.showSettings ? settingsCol.implicitHeight : mainCol.implicitHeight) + padding * 2
+    contentHeight: (root.showSettings ? settingsCol.implicitHeight
+                    : root.showAurDetail ? aurDetailCol.implicitHeight
+                    : mainCol.implicitHeight) + padding * 2
 
-    onOpenChanged: if (!open) root.showSettings = false
+    onOpenChanged: if (!open) { root.showSettings = false; root.showAurDetail = false }
 
     // ── reusable action button component ──────────────────────────────────
     component ActionBtn: Rectangle {
@@ -496,7 +543,7 @@ BarWidget {
     // ═══════════════════════════════════════════════════════════════════════
     Column {
       id: mainCol
-      visible: !root.showSettings
+      visible: !root.showSettings && !root.showAurDetail
       width: detail.contentWidth - detail.padding * 2
       spacing: Style.spacing.lg
 
@@ -546,6 +593,18 @@ BarWidget {
           Text { id: aurSt; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; text: root.everScanned ? root.statusLabel(root.aur.status) : "—"; color: root.statusColor(root.aur.status); font.family: Style.font.family; font.pixelSize: Style.font.caption; font.bold: true }
         }
         Text { width: parent.width; text: root.everScanned ? (root.aur.summary || "no data") : "no scan yet"; color: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.8); font.family: Style.font.family; font.pixelSize: Style.font.bodySmall; wrapMode: Text.Wrap }
+        Rectangle {
+          visible: root.aurIssues.length > 0
+          width: parent.width
+          height: Style.spacing.controlHeight
+          radius: Style.cornerRadius
+          color: aurDetailMa.containsMouse ? Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.08) : "transparent"
+          border.color: aurDetailMa.containsMouse ? Color.accent : Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.15)
+          border.width: 1
+          Behavior on color { ColorAnimation { duration: 120 } }
+          Text { anchors.centerIn: parent; text: "View detail"; color: aurDetailMa.containsMouse ? Color.accent : Color.popups.text; font.family: Style.font.family; font.pixelSize: Style.font.bodySmall }
+          MouseArea { id: aurDetailMa; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.showAurDetail = true }
+        }
       }
 
       // Bumblebee results
@@ -632,6 +691,95 @@ BarWidget {
           Behavior on color { ColorAnimation { duration: 120 } }
           Text { anchors.centerIn: parent; text: root.securityScanning ? "Scanning…" : "Scan now"; color: (scanMa.containsMouse && !root.securityScanning) ? Color.accent : Color.popups.text; font.family: Style.font.family; font.pixelSize: Style.font.bodySmall }
           MouseArea { id: scanMa; anchors.fill: parent; hoverEnabled: true; enabled: !root.securityScanning; cursorShape: root.securityScanning ? Qt.ArrowCursor : Qt.PointingHandCursor; onClicked: root.rescan() }
+        }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // AUR-Malware detail view — what failed/warned, and why. The main view
+    // only ever had room for a status word + a one-line summary; this is
+    // where "which check, and what did it actually find" lives instead of
+    // dumping it into that summary line.
+    // ═══════════════════════════════════════════════════════════════════════
+    Column {
+      id: aurDetailCol
+      visible: root.showAurDetail
+      width: detail.contentWidth - detail.padding * 2
+      spacing: Style.spacing.md
+
+      Item {
+        width: parent.width
+        height: Style.spacing.xxl
+        PanelActionButton {
+          anchors.left: parent.left
+          anchors.verticalCenter: parent.verticalCenter
+          iconText: "󰁍"
+          foreground: Color.popups.text
+          tooltipText: "Back"
+          onClicked: root.showAurDetail = false
+        }
+        Text {
+          anchors.centerIn: parent
+          text: "AUR-MALWARE DETAIL"
+          color: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.7)
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
+          font.bold: true
+        }
+      }
+
+      component IssueRow: Column {
+        required property var modelData
+        width: aurDetailCol.width
+        spacing: Style.spacing.xxs
+        opacity: modelData.dismissed ? 0.5 : 1.0
+        Behavior on opacity { NumberAnimation { duration: 120 } }
+        PanelSeparator { foreground: Color.popups.text }
+        Item {
+          width: parent.width
+          height: Math.max(issueNameText.implicitHeight, issueDismissBtn.implicitHeight)
+          Text {
+            id: issueNameText
+            anchors.left: parent.left
+            anchors.right: issueDismissBtn.visible ? issueDismissBtn.left : parent.right
+            anchors.rightMargin: issueDismissBtn.visible ? Style.spacing.xs : 0
+            text: (modelData.status === "FAIL" ? "✕ " : "⚠ ") + modelData.name
+              + (modelData.dismissed ? " (dismissed)" : "")
+            color: modelData.status === "FAIL" ? Color.urgent : "#e8a33d"
+            font.family: Style.font.family
+            font.pixelSize: Style.font.bodySmall
+            font.bold: true
+            wrapMode: Text.Wrap
+          }
+          PanelActionButton {
+            id: issueDismissBtn
+            anchors.right: parent.right
+            anchors.top: parent.top
+            visible: modelData.dismissible === true
+            iconText: modelData.dismissed ? "󰑙" : "󰄬"
+            foreground: Color.popups.text
+            tooltipText: modelData.dismissed ? "Reactivate" : "Dismiss (reviewed false positive)"
+            onClicked: root.setAurDismissed(modelData.name, modelData.detail, !modelData.dismissed)
+          }
+        }
+        Text {
+          width: parent.width
+          text: modelData.detail
+          color: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.75)
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
+          wrapMode: Text.Wrap
+        }
+      }
+
+      Repeater {
+        model: root.aurGroups
+        delegate: Column {
+          required property var modelData
+          width: aurDetailCol.width
+          spacing: Style.spacing.sm
+          PanelSectionHeader { foreground: Color.popups.text; text: modelData.source.toUpperCase() }
+          Repeater { model: modelData.issues; delegate: IssueRow {} }
         }
       }
     }
