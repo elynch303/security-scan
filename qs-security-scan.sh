@@ -5,25 +5,39 @@
 #
 # AUR-Malware is skipped entirely unless something executable already sits
 # at QS_SEC_AUR_MALWARE -- omitting the key is safe, the widget only shows
-# a section when its own presence probe finds the tool installed.
+# a section when its own presence probe finds the tool installed. Default
+# path matches SecurityWidget.qml's own install button, which clones
+# nightdevil00/AUR-Malware -- the upstream Atomic-Arch/AUR-Malware this repo
+# originally pointed at is gone (404); nightdevil00's fork ships the same
+# check-atomic-arch_new.sh entry point.
 set -uo pipefail
 
 STATUS_FILE="${QS_SEC_STATUS_FILE:-$HOME/.cache/qs-security-status.json}"
-AUR_MALWARE_PATH="${QS_SEC_AUR_MALWARE:-/local/applications/AUR-Malware/check-atomic-arch_new.sh}"
+AUR_MALWARE_PATH="${QS_SEC_AUR_MALWARE:-$HOME/.local/share/AUR-Malware/check-atomic-arch_new.sh}"
 BUMBLEBEE_BIN="${QS_SEC_BUMBLEBEE:-$HOME/.local/bin/bumblebee}"
 CATALOG="${QS_SEC_BUMBLEBEE_CATALOG:-$HOME/.local/share/qs-security/threat-intel}"
 
 aur_json="null"
 if [[ -x $AUR_MALWARE_PATH ]]; then
-  aur_out=$("$AUR_MALWARE_PATH" 2>&1)
-  aur_code=$?
-  aur_status=$([[ $aur_code -eq 0 ]] && echo clean || echo fail)
-  aur_json=$(python3 -c '
+  # --json still prints its live colored progress to stdout before the final
+  # JSON blob, and the script's exit code is always 0 regardless of findings
+  # -- a plain "last line" / exit-code check always reports "clean" with a
+  # disclaimer fragment as the summary, silently hiding real findings. The
+  # JSON itself is the last '{'-only line to EOF.
+  aur_out=$("$AUR_MALWARE_PATH" --json 2>/dev/null)
+  aur_json=$(awk '/^\{$/{f=1} f' <<<"$aur_out" | python3 -c '
 import json, sys
-status, out = sys.argv[1], sys.argv[2].strip()
-summary = out.splitlines()[-1] if out else ""
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print("null"); sys.exit()
+verdict = d.get("verdict", "")
+status = {"CLEAN": "clean", "WARNINGS": "warn", "COMPROMISED": "fail"}.get(verdict, "error")
+s = d.get("summary", {})
+fail, warn, total = s.get("fail", 0), s.get("warn", 0), s.get("total", 0)
+summary = str(fail) + " failures, " + str(warn) + " warnings out of " + str(total) + " checks"
 print(json.dumps({"status": status, "summary": summary}))
-' "$aur_status" "$aur_out")
+')
 fi
 
 bb_json="null"

@@ -15,7 +15,7 @@ import qs.Ui
 //               — preferences persisted to ~/.config/qs-security/settings.json
 //
 // Scanners:
-//   AUR-Malware  git clone to /local/applications/AUR-Malware (or QS_SEC_AUR_MALWARE)
+//   AUR-Malware  git clone to ~/.local/share/AUR-Malware (or QS_SEC_AUR_MALWARE)
 //   bumblebee    go install github.com/anchore/bumblebee@latest
 //   bun-check    bundled script → ~/.local/bin/qs-bun-check-oneshot.sh
 BarWidget {
@@ -67,12 +67,12 @@ BarWidget {
 
   readonly property string aurEffectivePath: {
     var ov = Quickshell.env("QS_SEC_AUR_MALWARE")
-    return ov ? ov : "/local/applications/AUR-Malware/check-atomic-arch_new.sh"
+    return ov ? ov : root.home + "/.local/share/AUR-Malware/check-atomic-arch_new.sh"
   }
   readonly property string aurMalwareDir: {
     var p = root.aurEffectivePath
     var i = p.lastIndexOf("/")
-    return i > 0 ? p.substring(0, i) : "/local/applications/AUR-Malware"
+    return i > 0 ? p.substring(0, i) : root.home + "/.local/share/AUR-Malware"
   }
 
   readonly property string bunDst: home + "/.local/bin/qs-bun-check-oneshot.sh"
@@ -249,7 +249,7 @@ BarWidget {
     root.aurOpBusy = true; root.aurOpMsg = ""; root.aurOpError = false
     aurInstallProc.command = [
       "bash", "-c",
-      "mkdir -p \"$(dirname \"$0\")\" && git clone https://github.com/Atomic-Arch/AUR-Malware.git \"$0\"",
+      "mkdir -p \"$(dirname \"$0\")\" && git clone https://github.com/nightdevil00/AUR-Malware.git \"$0\"",
       root.aurMalwareDir
     ]
     aurInstallProc.running = false; aurInstallProc.running = true
