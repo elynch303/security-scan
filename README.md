@@ -13,6 +13,7 @@ An [Omarchy](https://omarchy.com) bar-widget plugin that shows a live security b
 - Manual "Scan now" button in popup
 - Per-project one-shot scan buttons (bun-check, bumblebee)
 - **All three scanners are optional** — sections only appear when the tool is installed
+- **AUR-Malware detail view**: "View detail" opens a breakdown of every failed/warned check, grouped by the package or reason behind it when one can be identified (an infected package name, an `/etc/hosts` comment, the package owning a flagged file). Findings from heuristic checks (not the ones that are direct evidence of an actual compromise) can be dismissed as a reviewed false positive — dismissed findings stay visible, dimmed, with a one-click undo, and stop counting toward the badge color until the underlying finding changes
 
 ## Scanners
 

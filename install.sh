@@ -24,6 +24,8 @@ BUN_CHECK_DST="$BIN_DIR/qs-bun-check-oneshot.sh"
 
 SCAN_SCRIPT_SRC="$SCRIPT_DIR/qs-security-scan.sh"
 SCAN_SCRIPT_DST="$BIN_DIR/qs-security-scan.sh"
+DISMISS_SCRIPT_SRC="$SCRIPT_DIR/qs-security-dismiss.sh"
+DISMISS_SCRIPT_DST="$BIN_DIR/qs-security-dismiss.sh"
 SCAN_SERVICE_SRC="$SCRIPT_DIR/systemd/qs-security-scan.service"
 SCAN_TIMER_SRC="$SCRIPT_DIR/systemd/qs-security-scan.timer"
 
@@ -62,6 +64,8 @@ if [[ "$install_scan_timer" == true ]]; then
   mkdir -p "$BIN_DIR" "$SYSTEMD_DIR"
   cp "$SCAN_SCRIPT_SRC" "$SCAN_SCRIPT_DST"
   chmod +x "$SCAN_SCRIPT_DST"
+  cp "$DISMISS_SCRIPT_SRC" "$DISMISS_SCRIPT_DST"
+  chmod +x "$DISMISS_SCRIPT_DST"
   cp "$SCAN_SERVICE_SRC" "$SYSTEMD_DIR/qs-security-scan.service"
   cp "$SCAN_TIMER_SRC" "$SYSTEMD_DIR/qs-security-scan.timer"
   systemctl --user daemon-reload
