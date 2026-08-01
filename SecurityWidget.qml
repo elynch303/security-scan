@@ -449,7 +449,7 @@ Panel {
     if (!root.everScanned) return Color.accent
     if (root.overallStatus === "fail") return root.urgent
     if (root.overallStatus === "warn") return "#e8a33d"
-    return Color.accent
+    return root.foreground
   }
 
   function statusColor(s) {
