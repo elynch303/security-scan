@@ -32,6 +32,17 @@ Panel {
   // widget follows whichever theme/bar is currently active.
   readonly property color foreground: bar ? bar.foreground : "#cacccc"
   readonly property color urgent: bar ? bar.urgent : "#a55555"
+  // bar.foreground is the theme's static token (fine for popup content,
+  // which sits on its own opaque card). The bar icon itself needs
+  // bar.barForeground instead -- that's the one WidgetButton actually falls
+  // back to, and it's recomputed live against whatever is behind a
+  // transparent/blurred bar (see Bar.qml's transparentForegroundProc) so the
+  // icon stays legible. Since this widget's `active` is true almost
+  // whenever any scanner is installed, it never fell through to that
+  // dynamic default -- it always went through activeColor/badgeColor(),
+  // which used the static token and could end up lighter or darker than
+  // every other bar icon depending on what's behind the bar.
+  readonly property color barForeground: bar ? bar.barForeground : root.foreground
 
   // ── scan state ──────────────────────────────────────────────────────────
   property var securityStatus: ({})
@@ -449,7 +460,7 @@ Panel {
     if (!root.everScanned) return Color.accent
     if (root.overallStatus === "fail") return root.urgent
     if (root.overallStatus === "warn") return "#e8a33d"
-    return root.foreground
+    return root.barForeground
   }
 
   function statusColor(s) {
