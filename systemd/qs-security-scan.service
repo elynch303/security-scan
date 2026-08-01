@@ -3,4 +3,7 @@ Description=Security scan for omarchy bar
 
 [Service]
 Type=oneshot
+ExecCondition=/bin/sh -c 'command -v gamemoded >/dev/null 2>&1 || exit 0; gamemoded -s 2>/dev/null | grep -q inactive'
 ExecStart=%h/.local/bin/qs-security-scan.sh
+Nice=19
+IOSchedulingClass=idle

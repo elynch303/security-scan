@@ -64,8 +64,13 @@ Description=Security scan for omarchy bar
 
 [Service]
 Type=oneshot
+ExecCondition=/bin/sh -c 'command -v gamemoded >/dev/null 2>&1 || exit 0; gamemoded -s 2>/dev/null | grep -q inactive'
 ExecStart=%h/.local/bin/qs-security-scan.sh
+Nice=19
+IOSchedulingClass=idle
 ```
+
+`ExecCondition` skips a scheduled run (without counting it as a failure) while GameMode reports an active client, so the scan doesn't start mid-session and compete for CPU/IO. `Nice=19`/`IOSchedulingClass=idle` cover the case where a game launches after a scan is already running, so it yields resources instead of competing for them. Both are no-ops if `gamemoded` isn't installed.
 
 ```
 systemctl --user enable --now qs-security-scan.timer
