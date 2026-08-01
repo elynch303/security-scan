@@ -18,7 +18,7 @@ An [Omarchy](https://omarchy.com) bar-widget plugin that shows a live security b
 
 | Scanner | What it checks | How to install |
 |---|---|---|
-| **AUR-Malware** | Atomic Arch IOC scan — pacman/AUR packages, npm/bun caches, eBPF rootkit artifacts, hidden processes | Clone [AUR-Malware](https://github.com/Atomic-Arch/AUR-Malware) to `/local/applications/AUR-Malware/` |
+| **AUR-Malware** | Atomic Arch IOC scan — pacman/AUR packages, npm/bun caches, eBPF rootkit artifacts, hidden processes | Clone [AUR-Malware](https://github.com/nightdevil00/AUR-Malware) to `~/.local/share/AUR-Malware/` (the original `Atomic-Arch/AUR-Malware` this pointed at is gone; this fork ships the same `check-atomic-arch_new.sh`) |
 | **[bumblebee](https://github.com/perplexityai/bumblebee)** | Endpoint package inventory across npm, pypi, go, rubygems, homebrew, etc. | `GOBIN=$HOME/.local/bin go install github.com/perplexityai/bumblebee@latest` |
 | **bun-check** | Per-project dev-env one-shot scan (opens a terminal picker) | Bundled — run `install.sh` after adding the plugin |
 
@@ -64,8 +64,13 @@ Description=Security scan for omarchy bar
 
 [Service]
 Type=oneshot
+ExecCondition=/bin/sh -c 'command -v gamemoded >/dev/null 2>&1 || exit 0; gamemoded -s 2>/dev/null | grep -q inactive'
 ExecStart=%h/.local/bin/qs-security-scan.sh
+Nice=19
+IOSchedulingClass=idle
 ```
+
+`ExecCondition` skips a scheduled run (without counting it as a failure) while GameMode reports an active client, so the scan doesn't start mid-session and compete for CPU/IO. `Nice=19`/`IOSchedulingClass=idle` cover the case where a game launches after a scan is already running, so it yields resources instead of competing for them. Both are no-ops if `gamemoded` isn't installed.
 
 ```
 systemctl --user enable --now qs-security-scan.timer
