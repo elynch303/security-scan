@@ -49,6 +49,8 @@ BarWidget {
 
   // ── settings panel UI state ─────────────────────────────────────────────
   property bool showSettings: false
+  property bool showDetail: false
+  property string aurDetailText: ""
 
   property bool   aurOpBusy: false
   property string aurOpMsg:  ""
@@ -104,6 +106,15 @@ BarWidget {
   }
 
   FileView {
+    id: aurDetailFile
+    path: home + "/.cache/qs-security-aur-detail.txt"
+    watchChanges: true
+    onFileChanged: aurDetailFile.reload()
+    onLoaded: root.aurDetailText = aurDetailFile.text()
+    onLoadFailed: root.aurDetailText = ""
+  }
+
+  FileView {
     id: bunProbe
     path: root.bunDst
     onLoaded:     root.bunInstalled = true
@@ -127,6 +138,7 @@ BarWidget {
   Component.onCompleted: {
     statusFile.reload()
     settingsFile.reload()
+    aurDetailFile.reload()
     bunProbe.reload()
     aurProbe.reload()
     bbProbe.reload()
@@ -398,9 +410,9 @@ BarWidget {
     bar: root.bar
     owner: root
     contentWidth: Style.space(300)
-    contentHeight: (root.showSettings ? settingsCol.implicitHeight : mainCol.implicitHeight) + padding * 2
+    contentHeight: (root.showSettings ? settingsCol.implicitHeight : root.showDetail ? detailCol.implicitHeight : mainCol.implicitHeight) + padding * 2
 
-    onOpenChanged: if (!open) root.showSettings = false
+    onOpenChanged: if (!open) { root.showSettings = false; root.showDetail = false }
 
     // ── reusable action button component ──────────────────────────────────
     component ActionBtn: Rectangle {
@@ -564,6 +576,23 @@ BarWidget {
           Text { id: aurSt; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; text: root.everScanned ? root.statusLabel(root.aur.status) : "—"; color: root.statusColor(root.aur.status); font.family: Style.font.family; font.pixelSize: Style.font.caption; font.bold: true }
         }
         Text { width: parent.width; text: root.everScanned ? (root.aur.summary || "no data") : "no scan yet"; color: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.8); font.family: Style.font.family; font.pixelSize: Style.font.bodySmall; wrapMode: Text.Wrap }
+        Text {
+          visible: root.everScanned && root.aurDetailText !== ""
+          width: parent.width
+          horizontalAlignment: Text.AlignRight
+          text: "full output ›"
+          color: aurDetailLink.containsMouse ? Color.accent : Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.35)
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
+          Behavior on color { ColorAnimation { duration: 80 } }
+          MouseArea {
+            id: aurDetailLink
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: { root.showDetail = true; detailFlickable.contentY = 0 }
+          }
+        }
       }
 
       // Bumblebee results
@@ -719,6 +748,60 @@ BarWidget {
         onInstallClicked:   root.installBun()
         onUninstallClicked: root.uninstallBun()
         onToggleClicked:    root.toggleBun()
+      }
+
+      Item { width: parent.width; height: Style.spacing.xs }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Detail view — full AUR scan output
+    // ═══════════════════════════════════════════════════════════════════════
+    Column {
+      id: detailCol
+      visible: root.showDetail
+      width: detail.contentWidth - detail.padding * 2
+      spacing: Style.spacing.sm
+
+      Item {
+        width: parent.width
+        height: Style.spacing.xxl
+        PanelActionButton {
+          anchors.left: parent.left
+          anchors.verticalCenter: parent.verticalCenter
+          iconText: "󰁍"
+          foreground: Color.popups.text
+          tooltipText: "Back"
+          onClicked: root.showDetail = false
+        }
+        Text {
+          anchors.centerIn: parent
+          text: "AUR SCAN OUTPUT"
+          color: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.7)
+          font.family: Style.font.family
+          font.pixelSize: Style.font.caption
+          font.bold: true
+        }
+      }
+
+      PanelSeparator { foreground: Color.popups.text }
+
+      Flickable {
+        id: detailFlickable
+        width: parent.width
+        height: Style.space(380)
+        contentWidth: width
+        contentHeight: detailOutputText.implicitHeight
+        clip: true
+
+        Text {
+          id: detailOutputText
+          width: detailFlickable.width
+          text: root.aurDetailText !== "" ? root.aurDetailText : "No scan output yet.\nTrigger a scan first."
+          color: Qt.rgba(Color.popups.text.r, Color.popups.text.g, Color.popups.text.b, 0.82)
+          font.family: "monospace"
+          font.pixelSize: Style.font.caption
+          wrapMode: Text.WrapAnywhere
+        }
       }
 
       Item { width: parent.width; height: Style.spacing.xs }
