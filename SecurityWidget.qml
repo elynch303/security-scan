@@ -130,6 +130,7 @@ BarWidget {
     bunProbe.reload()
     aurProbe.reload()
     bbProbe.reload()
+    startupScanTimer.start()
   }
 
   // re-probe when settings opens so the panel always shows current state
@@ -184,6 +185,23 @@ BarWidget {
     interval: 60000
     running: root.securityScanning
     onTriggered: { root.securityScanning = false; rescanProc.running = false }
+  }
+
+  // Auto-scan once 10s after startup so the bar never shows a stale result on login.
+  Timer {
+    id: startupScanTimer
+    interval: 10000
+    repeat: false
+    onTriggered: if (root.anyScanner) root.rescan()
+  }
+
+  // Periodic background rescan every 30 minutes.
+  Timer {
+    id: periodicScanTimer
+    interval: 1800000
+    repeat: true
+    running: root.anyScanner
+    onTriggered: root.rescan()
   }
 
   // ── install / uninstall processes ───────────────────────────────────────
